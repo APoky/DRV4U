@@ -1,0 +1,56 @@
+To build set PATH: for compiler path
+export PATH='/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/recipe-sysroot-native/usr/bin/aarch64-poky-linux':$PATH
+
+1. I2C Simulation Module (i2c-sim-adapter.c)
+This module registers the virtual I2C adapter, maintains the random register data, and uses a timer to periodically fire the simulated IRQ (number 100 from the DTS) to notify the client driver.
+
+2.Client Driver Module (cs-i2c-driver.c)
+This module binds to the simulated sensor, requests the interrupt line, and uses a work queue to perform the actual I2C read in the bottom half when the interrupt fires.
+which implements the requested logic: it waits for the Data Ready IRQ and then uses a work queue to read the I2C register data.
+
+This driver successfully implements the requested event-driven read:
+
+    The cs_probe function gets the IRQ number from the Device Tree and registers the cs_irq_handler.
+
+    When the Simulation Module fires IRQ 100, cs_irq_handler runs (top half).
+
+    The handler immediately schedules cs_read_data_worker to run in a safe, process context (bottom half).
+
+    The worker performs the actual i2c_smbus_read_byte_data calls to fetch the data from the simulated sensor registers.
+
+3.Device Tree Node (sim_device.dtsi)
+This node defines the virtual I2C bus and the sensor device that includes the interrupts property.
+
+4.Device Tree Compilation: You need to compile this DTS file into a binary blob (.dtb) and load it when starting your QEMU environment:
+dtc -I dts -O dtb -o sim_device.dtb sim_device.dtsi
+# Then, when starting QEMU:
+# qemu-system-aarch64 ... -dtb /path/to/sim_device.dtb 
+
+5.## Testing Instructions (Using Kernel Logs)
+
+Since the process is now event-driven (IRQ -> Read), there is no need for a user-space C program. You test the system by watching the kernel logs.
+
+1.  **Load the Simulator (Bus & IRQ Emitter):**
+    ```bash
+    insmod i2c-sim-adapter.ko 
+    2.  **Load the Driver (Client/Listener):**
+    ```bash
+    insmod cs-i2c-driver.ko
+    3.  **Monitor Logs:** Use `dmesg -w` or similar to watch the kernel messages. Every 3 seconds, you should see the complete IRQ -> Workqueue -> I2C Read cycle logged, with new, randomly generated data:
+    * `i2c-sim-adapter: New data ready... Firing IRQ 100...`
+    * `i2c-sim-adapter: Sim: Responded to READ Temp...`
+    * `i2c-sim-adapter: Sim: Responded to READ Humid...`
+    * `: WORKER: Data received: Temp=0xXX (...), Humidity=0xYY (...). Waiting for next IRQ...`
+
+5.RUN Qemuarm64:
+
+sudo qemu-system-aarch64 \
+  -M virt -cpu cortex-a72 -m 1024 \
+  -kernel tmp/deploy/images/qemuarm64/Image \
+  -drive file=tmp/deploy/images/qemuarm64/core-image-full-cmdline-qemuarm64.ext4,if=virtio,format=raw \
+  -serial stdio -display none \
+  -netdev bridge,id=net0,br=br0 \
+  -device virtio-net-device,netdev=net0,mac=52:54:00:12:34:56 \
+  -device loader,file=/home/htr/rpi-rootfs/rootfs/i2c-sensor/sim_device.dtb \
+  -append "root=/dev/vda console=ttyAMA0,115200 rw ip=192.168.10.10::192.168.10.1:255.255.255.0:qemuarm64:eth0:off"
+

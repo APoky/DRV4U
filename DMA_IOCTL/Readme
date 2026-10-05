@@ -1,0 +1,57 @@
+User space                  Kernel driver                  Hardware
+-----------                ----------------                ----------
+mmap()        ───────────►  DMA buffer allocated
+ioctl(START) ───────────►  Program DMA registers  ──────► DMA engine
+                                │
+                                │ interrupt
+                                ▼
+                         ISR marks frame ready
+read frame directly from mmap buffer (NO COPY)
+
+
+
+
+/*--------------------------------------------------------------------*/
+
+main.c
+
+Open device
+
+/dev/mydma created by the driver.
+
+mmap()
+
+Maps the DMA buffer into user space (zero-copy)
+
+ioctl(IOCTL_START_STREAM)
+
+Starts DMA transfer in the driver
+
+read()
+
+Blocks until the driver signals frame-ready via IRQ
+
+process_frame()
+
+Example of accessing the DMA buffer directly
+
+Cleanup
+
+munmap() and close()
+
+gcc -o main main.c
+/*--------------------------------------------------------------------*/
+
+For dma_ioctl:
+
+Device Tree node (REQUIRED)
+
+Your driver assumes this DTS node exists:
+
+mydma@40000000 {
+    compatible = "vendor,mydma";
+    reg = <0x40000000 0x1000>;
+    interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+    dma-coherent;
+    status = "okay";
+};

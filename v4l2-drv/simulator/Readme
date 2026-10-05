@@ -1,0 +1,11 @@
+Final local.conf changes: Your local.conf file should have lines that look something like this:
+
+# Add GStreamer and plugins
+CORE_IMAGE_EXTRA_INSTALL += "gstreamer1.0 gstreamer1.0-plugins-base"
+CORE_IMAGE_EXTRA_INSTALL += "gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-plugins-v4l2"
+CORE_IMAGE_EXTRA_INSTALL += "gstreamer1.0-tools"
+
+Rebuild the image: After saving the changes to your local.conf file, navigate back to your build directory and rebuild your image using the appropriate bitbake command. 
+For example:
+
+bitbake core-image-full-cmdline

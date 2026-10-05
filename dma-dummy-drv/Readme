@@ -1,0 +1,62 @@
+QEMU  driver and user-space program compilation 
+add path to cross compiler in sytem PATH env. variable:
+
+export PATH=/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/recipe-sysroot-native/usr/bin/aarch64-poky-linux:${PATH}
+
+
+dma-sim-drv-qemu.working.c
+root@qemuarm64:~/test# dmesg | tail -f
+[   10.468872] NFSD: starting 90-second grace period (net f0000000)
+[   65.472664] dma_sim_drv_qemu: loading out-of-tree module taints kernel.
+[   65.475954] Loading dummy-dma-drv: Manual platform device creation.
+[   65.484239] dummy-dma-drv dummy-dma-drv: Buffers allocated. Src: 0x44474000, Dst: 0x44475000
+[   65.484562] dummy-dma-drv dummy-dma-drv: Dummy DMA: Device successfully probed. Initial transfer scheduled.
+[   65.484633] dummy-dma-drv dummy-dma-drv: DMA Sim: Transfer started asynchronously (Simulating 100ms delay)...
+[   65.491000] dummy-dma-drv loaded successfully and device probed.
+[   65.590026] dummy-dma-drv dummy-dma-drv: DMA Sim: Data copy complete. Triggering interrupt handler logic.
+[   65.590138] dummy-dma-drv dummy-dma-drv: Dummy DMA ISR: IRQ 32 received!
+[   65.590245] dummy-dma-drv dummy-dma-drv: Dummy DMA ISR: Transfer successful. Buffers match.
+
+
+ma-sim-drv-qemu.c
+[  557.423093] Loading dummy-dma-drv: Manual platform device creation.
+[  557.431932] dummy-dma-drv dummy-dma-drv: Buffers allocated. Src: 0x4444f000, Dst: 0x44451000
+[  557.432627] dummy-dma-drv dummy-dma-drv: Dummy DMA: Device successfully probed. User space control ready at /dev/dummy_dma.
+[  557.435680] dummy-dma-drv loaded successfully and device probed.
+[  691.820634] dummy-dma-drv dummy-dma-drv: Dummy DMA: Device removed.
+[  691.821074] dummy-dma-drv unloaded.
+
+
+to compile user space dma-test:
+# Define the variable
+SYSROOT_PATH="/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/recipe-sysroot"
+
+# Run the cross-compiler, explicitly telling it where the target headers are
+aarch64-poky-linux-gcc d-test.c -g -o dma-test --sysroot=$SYSROOT_PATH
+
+root@qemuarm64:~/test# ./dma-test 
+--- DMA Driver Character Device Test ---
+Opening device file: /dev/dummy_dma
+Source buffer initialized with 0x42 pattern.
+Destination buffer initialized with 0x55 pattern.
+Attempting to write 32 bytes (triggers DMA transfer)...
+Write successful. Transfer simulation complete in kernel.
+Read successful. Verifying buffers...
+
+TEST SUCCESS: Source and Destination buffers match!
+The DMA driver successfully completed the transfer simulation.
+
+
+root@qemuarm64:~/test# dmesg | tail -f
+[ 2016.112045] dummy-dma-drv dummy-dma-drv: Dummy DMA: Device successfully probed. User space control ready at /dev/dummy_dma.
+[ 2016.118546] dummy-dma-drv loaded successfully and device probed.
+[ 2020.771822] dummy-dma-drv dummy-dma-drv: Device opened.
+[ 2020.773615] dummy-dma-drv dummy-dma-drv: DMA Sim: Transfer started asynchronously (Simulating 100ms delay)...
+[ 2020.878414] dummy-dma-drv dummy-dma-drv: DMA Sim: Data copy complete. Triggering interrupt handler logic.
+[ 2020.878505] dummy-dma-drv dummy-dma-drv: Dummy DMA ISR: IRQ 32 received!
+[ 2020.878558] dummy-dma-drv dummy-dma-drv: Dummy DMA ISR: Transfer successful. Buffers match.
+[ 2020.878827] dummy-dma-drv dummy-dma-drv: Transfer triggered by user space and successfully completed (blocking wait finished).
+[ 2020.879660] dummy-dma-drv dummy-dma-drv: Read 32 bytes from destination buffer.
+[ 2020.881285] dummy-dma-drv dummy-dma-drv: Device closed.
+r
+

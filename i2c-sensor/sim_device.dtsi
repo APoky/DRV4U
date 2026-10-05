@@ -1,0 +1,44 @@
+/dts-v1/;
+
+/ {
+	/* 
+	 * 1. Define a generic interrupt controller (intc).
+	 * This is necessary so the 'interrupt-parent' reference below is valid.
+	 */
+	intc: interrupt-controller {
+		compatible = "simple-bus"; /* Use a simple bus binding for the controller node */
+		#interrupt-cells = <2>;
+		interrupt-controller;
+	};
+
+    /* 
+	 * 2. Define the Virtual I2C Bus. 
+	 * The 'i2c-sim-adapter.c' module will bind to the "i2c-adapter-sim" compatible string. 
+	 */
+	 
+	i2c_sim_bus: i2c-adapter-sim {
+		compatible = "i2c-adapter-sim"; 
+		#address-cells = <1>;
+		#size-cells = <0>;
+		/* 
+		 * 3. Define the Simulated I2C Sensor.
+		 * The 'cs-i2c-driver.c' module will bind to the "i2c-envcombo-sim" compatible string.
+		 */
+		sim_sensor@40 {
+			compatible = "i2c-envcombo-sim";
+			reg = <0x40>;
+			
+			/* 
+			 * 4. Interrupt Configuration
+			 * - interrupt-parent links the device to our defined 'intc' node.
+			 * - interrupts = <100 0> specifies IRQ line 100 (which the simulator fires)
+			 *   and 0 for the default level trigger type.
+			 */
+			interrupt-parent = <&intc>; 
+			interrupts = <100 0>; 
+			status = "okay";
+		};
+	};
+
+};
+

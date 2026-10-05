@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "fs.h": "c"
+    },
+    "cmake.sourceDirectory": "/home/htr/rpi-rootfs/rootfs/BlueZ-BLE-server/BLE-Client"
+}

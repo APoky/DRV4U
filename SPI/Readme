@@ -1,0 +1,6 @@
+do I need at special spi driver for eeprom to support for spi-read-write.c functionality?
+
+✦ To use spi-read-write.c, you need an SPI controller driver for your hardware and the spidev kernel module
+   to expose /dev/spidevX.Y. You don't need a specific EEPROM kernel driver, as spi-read-write.c handles
+  the EEPROM's command protocol directly via spidev. A dedicated kernel driver would only be necessary for
+  deeper kernel integration, like exposing the EEPROM as a block device.

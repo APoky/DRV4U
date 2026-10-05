@@ -1,0 +1,31 @@
+/dts-v1/;
+
+/ {
+    /*
+     * Define address and size cell conventions for the entire device tree.
+     * This eliminates "avoid_default_addr_size" warnings.
+     */
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    /*
+     * This defines a custom hardware node that the dummy-dma-driver 
+     * kernel module will match against using the 'compatible' string.
+     * The address 0x30000000 is chosen arbitrarily high to avoid conflicts.
+     */
+    dummy_dma_node: dma-controller@30000000 {
+        compatible = "vendor,dummy-dma-controller";
+        
+        // Define the Memory Mapped I/O (MMIO) register region:
+        // Format: <start_address length>
+        // With #address-cells = <1> and #size-cells = <1>, this format is now explicitly correct.
+        reg = <0x30000000 0x1000>;
+        
+        // Removed the 'interrupts' property to avoid the "Missing interrupt-parent"
+        // warning. The driver will still request IRQ 105 by number, which is typical
+        // for simple platform device simulation.
+        
+        status = "okay";
+    };
+};
+

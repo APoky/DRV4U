@@ -1,0 +1,124 @@
+In PCIe architecture, Base Address Registers (BARs) are the windows through which the CPU communicates 
+with the hardware. Choosing BAR_NUM 0 is a standard convention for simple FPGA designs, 
+but there are specific technical and architectural reasons for it.
+
+1. The Default Mapping for Control Registers
+
+In most FPGA PCIe IP cores (like Xilinx's AXI Bridge for PCI Express), BAR 0 is the default location for 
+    the "Control and Status Registers" (CSRs).
+
+    BAR 0 is typically used for the register space (low latency, small size).
+
+    BAR 1 or 2 are often used for larger memory windows (like on-board DDR4 RAM on the FPGA).
+
+Since this driver is a "Mapper," it assumes you want to access the primary configuration space of the FPGA first.
+2. Standard IP Core Configuration
+
+When a developer configures the FPGA's PCIe Endpoint in tools like Vivado or Quartus, 
+they are presented with a list of BARs.
+
+    BAR 0 is enabled by default.
+
+    To use BAR 1, 2, or 5, the developer must explicitly enable and size them in the hardware design.
+
+
+How to verify which BAR your FPGA uses
+
+If you aren't sure which BAR your hardware is actually using, you can check the hardware's perspective 
+from the command line using lspci. Run this command:
+
+# Replace 01:00.0 with your device's PCI address found via lspci
+sudo lspci -v -s 01:00.0
+
+Look for the "Region" lines:
+
+    Region 0: Memory at ... → This is BAR 0.
+
+    Region 1: Memory at ... → This is BAR 1.
+
+ /********************************************************************************************************* */   
+
+Mapping Mechanism: PCIe Enumeration (Bus Type:PCIe (Most Common) )
+
+During boot, the PCIe host controller driver discovers the FPGA's device ID and reads its 
+Base Address Registers (BARs). The kernel then uses these BARs to automatically set up 
+the Physical-to-Virtual memory map.
+
+The Driver's Role: Requesting the Mapping
+
+The driver itself does not perform the initial hardware mapping, but it must request the mapping from the kernel using specific APIs. The kernel then returns a safe, virtual address pointer that the driver can use.
+
+If your FPGA configuration registers are mapped via the PCIe Enumeration mechanism, you have direct access to a BAR (Base Address Register) in the kernel. To perform read/write operations on those registers from userspace, you must bridge the kernel's memory space to the userspace process.
+
+This process involves using standard Linux mechanisms like /dev/mem or a custom driver with memory mapping capabilities (mmap).
+
+Here are the detailed steps for the two most common and secure methods:
+
+Method 1: The Standard Way (Custom Kernel Driver with mmap) - Recommended
+
+This is the preferred method for production systems because it is secure, protects the kernel from accidental corruption, and allows the driver to enforce access rules.
+
+Phase 1: Kernel Driver Development (Driver.c)
+
+You need a kernel driver that handles the PCIe enumeration and sets up the device for userspace mapping.
+
+    PCIe Probe: The driver finds the FPGA using its Vendor ID (VID) and Device ID (DID).
+
+    Request BAR: The driver requests ownership of the BAR that contains the configuration registers.
+
+    // Kernel code inside the probe function (simplified)
+    struct resource *bar_res;
+    bar_res = pci_resource_by_resno(pdev, BAR_NUM); // Get the BAR resource
+    ret = pci_request_resource(pdev, BAR_NUM);       // Request ownership
+
+    // ioremap_nocache is often used for I/O registers
+    data->reg_base = ioremap_nocache(bar_res->start, pci_resource_len(pdev, BAR_NUM));
+
+
+    Implement mmap: The driver implements the mmap file operation for a character device or a custom device file. This function is the bridge, telling the kernel which physical memory range should be accessible to the userspace process.
+
+    // Kernel code inside the driver's mmap function
+    static int fpga_mmap(struct file *filp, struct vm_area_struct *vma)
+    {
+        // Use io_remap_pfn_range to map the physical BAR address (pci_resource_start)
+        // to the process's virtual memory area (vma).
+        return io_remap_pfn_range(vma, vma->vm_start, 
+                                pci_resource_start(pdev, BAR_NUM) >> PAGE_SHIFT,
+                                vma->vm_end - vma->vm_start, vma->vm_page_prot);
+    }
+
+    // Connect this function to the device's file_operations
+    static const struct file_operations fpga_fops = {
+        // ... open, release ...
+        .mmap = fpga_mmap,
+    };
+
+Phase 2: Userspace Application (C/C++ Code)
+
+The userspace application opens the device file created by the driver and uses the standard mmap() system call.
+
+    //From driver code get device name
+    // Create the device node /dev/fpga_bar_mapper0
+    //device_create(fpga_data->dev_class, &pdev->dev, fpga_data->dev_num, NULL, "%s%d", DRV_NAME, 0);
+
+    Open the Device: Open the character device file (e.g., /dev/fpga_bar_mapper0) created by your driver.
+
+    int fd = open("/dev/fpga_bar_mapper0", O_RDWR | O_SYNC);
+    if (fd < 0) { /* handle error */ }
+
+    Memory Map: Map the device file into the process's address space. The mmap() call triggers your driver's fpga_mmap function.
+    
+    // Map the entire BAR size (e.g., 4KB)
+    size_t map_size = 4096; 
+    volatile uint32_t *reg_ptr = (volatile uint32_t *)mmap(
+        NULL, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0
+    );
+    if (reg_ptr == MAP_FAILED) { /* handle error */ }
+
+    Read/Write: Access the registers directly using the returned pointer, treating it like a C array.
+
+    // Read the ID register (assuming it's at offset 0x00)
+    uint32_t device_id = reg_ptr[0]; 
+
+    // Write a value to the control register (assuming it's at offset 0x04)
+    reg_ptr[1] = 0xAA55AA55;

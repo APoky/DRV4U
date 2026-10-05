@@ -1,0 +1,50 @@
+What is an IIO trigger?
+
+In the Linux Industrial I/O (IIO) subsystem, a trigger is an object that defines when sensor data should be captured.
+Think of it as an event source — it tells the driver "now it’s time to read the sensor."
+
+For example:
+
+1. A hardware interrupt (e.g. “data ready” pin from the sensor).
+
+2. A timer (e.g. poll every 100 ms).
+
+3. A software event (e.g. manual trigger via sysfs).
+
+
+The struct
+
+The kernel defines it like this (simplified from include/linux/iio/trigger.h):
+
+struct iio_trigger {
+    const char *name;                         // Trigger name (e.g. "env-combo-dev0")
+    struct device dev;                        // Embedded device structure
+    struct module *owner;                     // Owning module
+    void (*ops)(...);                         // Ops for trigger-specific behavior
+    struct list_head list;                    // For trigger registration
+    struct irq_chip *irq;                     // Optional IRQ handling
+    unsigned long flags;                      // Flags
+    ...
+};
+So it’s a kernel object that represents a trigger source.
+
+
+Why does your driver keep a struct iio_trigger *trig?
+
+In your struct env_combo_data:
+struct env_combo_data {
+    struct i2c_client *client;   // communication handle
+    struct mutex lock;           // to serialize access
+    struct iio_trigger *trig;    // associated trigger
+};
+The driver may need to register a trigger so that the IIO core and userspace know when data is available.
+
+For example, if the sensor had a "data ready" interrupt line, the driver would create a trigger and hook it to that IRQ.
+
+Then devm_iio_triggered_buffer_setup() (which you saw earlier) connects that trigger to the buffered capture mechanism.
+
+So whenever the trigger fires:
+
+1.The IIO framework calls your driver’s read_raw or buffer callback.
+
+2.Data gets pushed into the buffer and made available to userspace (e.g. via iio_readdev).

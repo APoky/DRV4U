@@ -1,0 +1,195 @@
+Requirements Driver framework 
+● Implement a Linux I2C driver that binds to the ENV-COMBO device. 
+● Exercise judgement as to how to map the registers.
+● Integrate with the IIO (Industrial IO) subsystem and implement IIO_TEMP and IIO_HUMIDITYRELATIVE channels, 
+and implement a triggered buffer setup. ● At this stage, there is no need to consider the ALS functionality.
+
+1. Set kernel environment: source env
+2. build driver: make
+3. move drivers (cs-driver.ko, combo_sensor_driver) to target: scp ...
+3. run bash: ./test.sh
+
+IIO_TEMP is defined in the Linux kernel source in the Industrial I/O (IIO) subsystem headers. Specifically, it is defined in:
+include/linux/iio/types.h
+Here’s a snippet from that file:
+enum iio_chan_type {
+    IIO_VOLTAGE,
+    IIO_CURRENT,
+    IIO_POWER,
+    IIO_ACCEL,
+    IIO_ANGL_VEL,
+    ...
+    IIO_TEMP,
+    IIO_HUMIDITYRELATIVE,
+    ...
+};
+Binding Mechanism
+
+1. i2c_device_id Table
+static const struct i2c_device_id env_combo_id[] = {
+    { "combo-sensor", 0 },
+    { }
+};
+MODULE_DEVICE_TABLE(i2c, env_combo_id);
+
+This table associates the driver with devices whose I2C name matches "combo-sensor".
+MODULE_DEVICE_TABLE() ensures this table is available to userspace tools (like udev).
+
+2. i2c_driver Structure
+static struct i2c_driver env_combo_driver = {
+    .driver = {
+        .name = "combo-driver",
+    },
+    .probe = env_combo_probe,
+    .id_table = env_combo_id,
+};
+module_i2c_driver(env_combo_driver);
+This tells the kernel: “If an I2C device with name combo-sensor is registered, call env_combo_probe().”
+
+3. Device Tree (if applicable) or Board File
+To actually match, a device with name "env-combo" must exist in the system. This typically happens through:
+
+A Device Tree entry (if using DT):
+i2c@1 {
+    env_combo@39 {
+        compatible = "vendor,env-combo";
+        reg = <0x39>;
+    };
+};
+
+
+When Exactly Is env_combo_read_raw() Called?
+
+It is triggered when userspace accesses:
+
+/sys/bus/iio/devices/iio:deviceX/in_temp_raw
+/sys/bus/iio/devices/iio:deviceX/in_temp_scale
+/sys/bus/iio/devices/iio:deviceX/in_humidityrelative_raw
+/sys/bus/iio/devices/iio:deviceX/in_humidityrelative_scale
+
+
+For example:
+cat /sys/bus/iio/devices/iio:device0/in_temp_raw
+This calls:
+→ IIO core .read_raw = env_combo_read_raw()
+
+Roles of Each Module
+Module	Role
+i2c-envcombo-sim.ko	Simulates an I2C device at a known address (0x39), responding like the ENV-COMBO sensor.
+cs_combo.ko	 Kernel I2C client driver that detects and communicates with the simulated device.
+
+Diagram:
+Userspace (e.g. cat /sys/bus/iio/devices/.../in_temp_raw)
+       ↓
+IIO subsystem
+       ↓
+cs-driver.ko (client driver)
+       ↓
+I2C core
+       ↓
+i2c-envcombo-sim.ko (simulated device)
+
+Use dmesg to verify it loaded, and ls /sys/bus/iio/devices/ to inspect sysfs entries.
+
+>dmesg | tail -f
+
+Test on QEMU (for RPI3+ )
+==================================================================================================================================
+Building a QEMU Environment with the Yocto Project
+
+The Yocto Project is a powerful collaboration that helps you create custom Linux-based systems for embedded devices, including a build-to-run QEMU environment. This guide will walk you through the process of setting up and building a QEMU image from scratch.
+
+Step 1: Install Host Prerequisites
+Before you begin, ensure your host machine has the necessary packages. This example uses a Debian/Ubuntu system.
+
+sudo apt-get update
+sudo apt-get install gawk wget git diffstat unzip texinfo gcc build-essential chrpath socat
+sudo apt-get install python3 python3-pip python3-pexpect xz-utils debianutils iproute2
+sudo apt-get install libtool zlib1g-dev libncurses5-dev libssl-dev
+
+Step 2: Set up the Yocto Build Environment
+Clone the Poky reference distribution and initialize the build environment. This process creates a build directory where all your work will take place.
+
+# Clone the Poky reference distribution
+git clone git://git.yoctoproject.org/poky.git
+cd poky
+git checkout yocto-4.0.1 # Use a stable release
+
+# Source the environment script to set up your shell
+source oe-init-build-env
+
+Step 3: Add Necessary Layers
+For a Raspberry Pi build, you need to add the meta-raspberrypi layer. The meta-qemu layer is part of Poky, so it's included by default.
+
+# From inside the 'build' directory
+bitbake-layers add-layer ../meta-raspberrypi
+
+Step 4: Configure the local.conf File
+This is the most crucial step. You must edit the conf/local.conf file to configure your build.
+
+Open the file and add or modify the following lines:
+
+# In conf/local.conf
+# This line defines the target machine.
+# To build a generic ARM QEMU image:
+#MACHINE = "qemuarm64"
+# Or, to specifically build for the Raspberry Pi 3:
+MACHINE = "raspberrypi3"
+
+# This is a good starting point for a minimal filesystem with networking
+IMAGE_FEATURES += "ssh-server-openssh"
+IMAGE_INSTALL += "packagegroup-core-boot packagegroup-core-full-cmdline"
+
+# Specify the kernel type
+PREFERRED_PROVIDER_virtual/kernel = "linux-raspberrypi"
+
+# Enable debugging if needed
+EXTRA_IMAGE_FEATURES = "debug-tweaks"
+
+Step 5: Start the Build
+Now, you are ready to start the build. Yocto will download all the sources, compile the toolchain, the kernel, and the root filesystem. This process will take a considerable amount of time.
+
+# This command builds the core-image-full-cmdline image for your machine
+bitbake core-image-full-cmdline
+
+But the most important one for booting is the .qcow2 image. You can use the runqemu script provided by Yocto to start the emulation.
+
+# Navigate to the images directory
+cd tmp/deploy/images/raspberrypi3/
+
+# Use the Yocto helper script to run QEMU
+runqemu raspberrypi3
+
+This guide should help you build a complete, self-contained QEMU environment for your kernel driver development.
+======================================================================================================================================================
+Builiding sdk populate
+bitbake core-image-minimal -c populate-sdk
+
+After a successful populate-sdk, the SDK is typically placed in:
+<YOCTO_BUILD_DIR>/tmp/deploy/sdk/
+
+To install the SDK:
+cd ~/yocto/build/tmp/deploy/sdk
+chmod +x ./oecore-x86_64-core-image-minimal-aarch64-toolchain-<timestamp>.sh
+./oecore-x86_64-core-image-minimal-aarch64-toolchain-<timestamp>.sh
+
+It will install into a directory like /opt/... and provide an environment-setup-* script. Source it before building your kernel module:
+source /opt/poky/.../environment-setup-aarch64-poky-linux
+
+To confirm what compiler is used on your system
+cat /lib/modules/$(uname -r)/build/Makefile | grep '^CC'
+
+1. Create a Makefile in the same directory as your cs_driver.c:
+# Makefile for env_combo I2C driver
+
+obj-m += cs_driver.o	
+
+KDIR := /lib/modules/$(shell uname -r)/build
+PWD := $(shell pwd)
+
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+clean:
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+

@@ -1,0 +1,54 @@
+{
+    "configurations": [
+        {
+            "name": "Linux Kernel Yocto",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/linux-qemuarm64-standard-build/include",
+                "/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/linux-qemuarm64-standard-build/arch/arm64/include",
+                "/home/htr/poky-projects/Sources/tmp/work/qemuarm64-poky-linux/linux-yocto/5.15.179+gitAUTOINC+896128cbf5_2bf9cba52f-r0/linux-qemuarm64-standard-build/arch/arm64/include/generated"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE",
+                "__aarch64__"
+            ],
+            // TODO: Replace with the actual path to your aarch64-poky-linux-gcc compiler.
+            // This is typically found within your Yocto SDK sysroot.
+            // Example: "/opt/poky/2.x.x/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-gcc"
+            "compilerPath": "/usr/bin/aarch64-poky-linux-gcc", // Placeholder
+            "cStandard": "c11",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-arm64"
+        },
+        {
+            "name": "Linux Kernel",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/generated"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE"
+            ],
+            "compilerPath": "/usr/bin/arm-linux-gnueabihf-gcc",
+            "cStandard": "c11",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-arm"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

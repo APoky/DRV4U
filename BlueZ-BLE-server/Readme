@@ -1,0 +1,27 @@
+📦 Unified Kernel Driver (MAX31865 + nRF52840 bridge)
+Features:
+Reads RTD temperature from MAX31865 over SPI
+Converts raw RTD value → temperature (simplified)
+Sends value over SPI to nRF52840
+Exposes /sys/.../temperature
+Uses workqueue (safe kernel design)
+
+spi0.0 → MAX31865
+spi0.1 → nRF52840
+
+📡 Device Tree (Raspberry Pi 3)
+
+&spi0 {
+	status = "okay";
+
+	max31865@0 {
+		compatible = "rpi,max31865_nrf52840_bridge";
+		reg = <0>;
+		spi-max-frequency = <500000>;
+	};
+
+	nrf52840@1 {
+		reg = <1>;
+		spi-max-frequency = <2000000>;
+	};
+};

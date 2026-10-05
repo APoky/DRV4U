@@ -1,0 +1,31 @@
+Sensor: Sony IMX487 (UV Image Sensor)
+Key specifications
+
+Diagonal size: 11.1 mm (Type 2/3) format. 
+
+Effective pixel count: ~8.13 megapixels (2856 H × 2848 V) 
+
+Pixel size: 2.74 µm × 2.74 µm 
+
+Shutter type: Global shutter — uses Sony’s “Pregius S” back-illuminated pixel structure. 
+
+UV wavelength compatibility: 200-400 nm (target industrial UV range) 
+
+Read-out / frame rates (full resolution, all-pixel scan):
+
+8 bit: ~194 fps 
+
+10 bit: ~193 fps 
+
+12 bit: ~127 fps 
+
+
+Interfaces: SLVS-EC (8/4/2/1 lanes) and SLVS (8/4 channels) for high-speed output. 
+
+
+Power supply typical: Analog: 3.3 V / 2.9 V; Digital: 1.1 V; Interface: 1.8 V. 
+
+
+Package: Ceramic LGA, ~20.0 × 16.8 mm
+I2C control plane protocol
+using 4-lane MIPI CSI-2 (USB 3.0, )
