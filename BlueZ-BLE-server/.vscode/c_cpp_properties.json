@@ -1,16 +1,53 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Kernel-ARM",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include"
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/generated",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/generated/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/generated",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/generated/uapi"
             ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
+            "defines": [
+                "__KERNEL__",
+                "MODULE",
+                "__LINUX_ARM_ARCH__=7"
+            ],
+            "compilerPath": "/usr/bin/arm-linux-gnueabihf-gcc",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-arm"
+        },
+        {
+            "name": "BLE-Client-Yocto",
+            "compilerPath": "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot-native/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++",
+            "compilerArgs": [
+                "--sysroot=/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot"
+            ],
+            "includePath": [
+                "${workspaceFolder}/BLE-Client/**",
+                "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/include",
+                "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/include/dbus-1.0",
+                "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/lib/dbus-1.0/include"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/BLE-Client/**",
+                    "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/include",
+                    "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/include/dbus-1.0",
+                    "/home/htr/poky-projects/Sources/tmp/work/cortexa57-poky-linux/bluez5/5.65-r0/recipe-sysroot/usr/lib/dbus-1.0/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-arm64"
         }
     ],
     "version": 4
