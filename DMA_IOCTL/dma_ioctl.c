@@ -6,6 +6,7 @@
 #include <linux/of_irq.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
@@ -95,7 +96,7 @@ static long mydma_ioctl(struct file *file,
     switch (cmd) {
     case IOCTL_START_STREAM:
         dev->frame_ready = 0;
-        dev->streaming = 1;
+        dev->streaming = 1;regs
         mydma_program_dma(dev);
         return 0;
     default:
