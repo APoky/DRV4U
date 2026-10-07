@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "SPI",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/generated",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/arch/arm/include/generated/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/uapi",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/generated",
+                "/home/htr/rpi-rootfs/rootfs/kernelPI3plus/linux/include/generated/uapi"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE",
+                "__LINUX_ARM_ARCH__=7"
+            ],
+            "compilerPath": "/usr/bin/arm-linux-gnueabihf-gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-arm"
+        }
+    ],
+    "version": 4
+}
