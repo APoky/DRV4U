@@ -1,0 +1,50 @@
+U-BLOX NEO M8
+
+I2C Helper (ublox_i2c_read_s32): This function handles the low-level I2C communication. It uses i2c_smbus_read_i2c_block_data to read 4 bytes starting from the given register address (either 0x0A or 0xA4). It assumes the common standard of Big Endian format for multi-byte sensor data and converts it to the CPU's native endianness.
+
+    Channel Specification (ublox_channels):
+
+        It defines two channels: Latitude and Longitude.
+
+        It uses the appropriate IIO types (IIO_POSITIONID) and modifiers (IIO_MOD_LAT/IIO_MOD_LON).
+
+        The address field in iio_chan_spec is used to store your custom register addresses (0x0A, 0xA4).
+
+        The scan_type is set to s32 (signed 32-bit) with IIO_BE (Big Endian) for buffer processing.
+
+    Direct Read (ublox_read_raw): This implements the standard user-space read hook (e.g., when a user runs cat /sys/.../in_position_lat_raw). It calls the I2C helper to fetch the current coordinate instantly.
+
+    Probe Function (ublox_probe):
+
+        It allocates and initializes the IIO device structure.
+
+        It retrieves the interrupt number (irq = client->irq) provided by the DTS.
+
+        It registers a threaded IRQ handler (ublox_irq_handler) which simply signals the IIO core that the trigger has fired.
+
+        It calls iio_triggered_buffer_setup to enable the buffered path, linking the trigger to the data processing function (ublox_trigger_handler).
+
+    Trigger Handler (ublox_trigger_handler): This is the heart of the triggered path. When the IRQ fires, this function executes:
+
+        It iterates over all enabled channels (indio_dev->active_scan_mask).
+
+        For each channel, it calls the I2C helper to read the 4-byte coordinate.
+
+        It stores the data in the private data->buffer.
+
+        Finally, it pushes the entire buffer content, along with a high-resolution kernel timestamp, to user-space using iio_push_to_buffers_with_timestamp.
+
+Example Device Tree Node (DTS)
+
+To use this driver, your system's device tree would need an entry like this (assuming your hardware uses I2C bus 1 and the device is at address 0x42, with the data-ready signal tied to GPIO pin 10):
+
+&i2c1 {
+    status = "okay";
+    
+    ublox_gps: gps@42 {
+        compatible = "vendor,ublox-gps-receiver"; // Matches the driver's compatible string
+        reg = <0x42>; // I2C address
+        interrupt-parent = <&gpio>;
+        interrupts = <10 IRQ_TYPE_LEVEL_LOW>; // Use GPIO 10, triggered on low level
+    };
+};

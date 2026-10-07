@@ -1,0 +1,138 @@
+#include <linux/module.h>
+#include <linux/i2c.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+
+module.h: Required for writing kernel modules (defines MODULE_* macros, init/exit handling).
+i2c.h: Provides APIs for I²C clients, adapters, and helper functions.
+init.h: Defines __init and __exit macros for marking init/cleanup functions.
+kernel.h: General kernel utilities (pr_info, error codes, etc.).
+
+Fake registers
+#define ENV_COMBO_I2C_ADDR 0x39
+static u8 envcombo_regs[256];
+
+0x39 is the I²C address that the real driver (cs-driver.ko) expects.
+envcombo_regs is a simple byte array simulating the device’s internal register map.
+
+
+Read function:
+static s32 envcombo_sim_read_byte(struct i2c_client *client, u8 reg)
+{
+    return envcombo_regs[reg];
+}
+Pretends to perform an I²C read.
+Instead of talking to hardware, it just returns whatever is stored in envcombo_regs[reg].
+
+Write function:
+static s32 envcombo_sim_write_byte(struct i2c_client *client, u8 reg, u8 val)
+{
+    envcombo_regs[reg] = val;
+    return 0;
+}
+Pretends to write to a device register.
+Just stores val into the envcombo_regs[] array.
+Returns 0 to indicate success.
+
+Dummy driver struct (optional):
+static struct i2c_driver envcombo_dummy_driver;
+
+Declares a dummy i2c_driver.
+If unused, this causes warnings (can be deleted).
+
+Probe/Remove (optional):
+static int envcombo_sim_probe(struct i2c_client *client,
+                              const struct i2c_device_id *id)
+{
+    pr_info("envcombo-sim: device probed\n");
+    return 0;
+}
+
+static int envcombo_sim_remove(struct i2c_client *client)
+{
+    pr_info("envcombo-sim: device removed\n");
+    return 0;
+}
+Normally used in real I²C drivers.
+Here, since we are just simulating, they don’t do much.
+
+Adapter definition:
+static struct i2c_adapter envcombo_adapter = {
+    .owner = THIS_MODULE,
+    .class = I2C_CLASS_HWMON,
+    .algo = &some_algo,
+    .name = "envcombo-sim-adapter",
+};
+Creates a virtual I²C bus.
+
+owner: Prevents module unloading while in use.
+class: Type of devices supported (here hwmon = sensors).
+algo: Pointer to an I²C algorithm structure (you might stub this).
+name: Identifier visible in /sys.
+
+Module init:
+static int __init envcombo_sim_init(void)
+{
+    struct i2c_board_info info = {
+        I2C_BOARD_INFO("env-combo", ENV_COMBO_I2C_ADDR),
+    };
+    struct i2c_client *client;
+    int ret;
+
+    ret = i2c_add_adapter(&envcombo_adapter);
+    if (ret)
+        return ret;
+
+    client = i2c_new_client_device(&envcombo_adapter, &info);
+    if (IS_ERR(client)) {
+        i2c_del_adapter(&envcombo_adapter);
+        return PTR_ERR(client);
+    }
+
+    pr_info("envcombo-sim: registered fake env-combo device at 0x%02x\n",
+            ENV_COMBO_I2C_ADDR);
+    return 0;
+}
+Defines an I²C device (env-combo, address 0x39).
+
+Registers the fake adapter (i2c_add_adapter).
+Attaches the fake device (i2c_new_client_device) to that adapter.
+➝ This is the magic point: now the real driver (env_combo.ko) sees "env-combo" at 0x39 and binds.
+If success: prints a message.
+
+static void __exit envcombo_sim_exit(void)
+{
+    i2c_del_adapter(&envcombo_adapter);
+    pr_info("envcombo-sim: removed\n");
+}
+Cleans up: unregisters the fake adapter (which deletes the fake client).
+
+In short:
+
+The simulator pretends to be an I²C device (env-combo@0x39).
+It registers a fake I²C adapter and adds a device on that adapter.
+The real driver (env_combo.ko) binds because it matches .type = "env-combo".
+All I²C reads/writes are just accesses to the envcombo_regs[] array.
+
+
+1. Role of the simulator (i2c-envcombo-sim.ko)
+
+It calls i2c_new_client_device() (or i2c_new_device() in older kernels).
+This function instantiates an I²C device on a bus, with:
+
+.type = "env-combo",
+.addr = 0x39
+
+That means: “On this bus, there is a device named env-combo at I²C address 0x39.”
+Without this step, the kernel doesn’t know such a device exists.
+
+2. Role of the driver (env_combo.ko)
+
+The driver registers itself as an i2c_driver:
+static struct i2c_driver env_combo_driver = {
+    .driver = { .name = "env-combo" },
+    .probe  = env_combo_probe,
+    .id_table = env_combo_id,
+};
+The I²C core compares the .type string "env-combo" (from the device created by the simulator) with the driver’s .name and .id_table.
+If they match → the kernel binds the driver to the device, and env_combo_probe() is called.

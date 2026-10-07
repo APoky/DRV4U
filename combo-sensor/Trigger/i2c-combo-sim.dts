@@ -1,0 +1,18 @@
+/dts-v1/;
+/ {
+    // Fragment to inject the simulated I2C device onto the primary I2C bus (0x100000)
+    fragment@0 {
+        // Target the I2C controller by its full memory address path
+        target-path = "/soc/i2c@100000"; 
+        
+        __overlay__ {
+            // Define the simulated device node
+            envcombo_sim@77 {
+                compatible = "env-combo"; // CRITICAL: MUST match your driver's ID table entry
+                reg = <0x77>;             // CRITICAL: The 7-bit I2C slave address
+                status = "okay";
+            };
+        };
+    };
+};
+
