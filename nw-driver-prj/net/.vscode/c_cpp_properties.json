@@ -1,0 +1,35 @@
+{
+  "configurations": [
+    {
+      "name": "Linux Kernel Module",
+      "compilerPath": "/usr/bin/gcc",
+      "intelliSenseMode": "linux-gcc-x64",
+      "compileCommands": "${workspaceFolder}/compile_commands.json",
+      "includePath": [
+        "${workspaceFolder}",
+        "/usr/src/linux-headers-6.14.0-37-generic/include",
+        "/usr/src/linux-headers-6.14.0-37-generic/arch/x86/include",
+        "/usr/src/linux-headers-6.14.0-37-generic/include/uapi",
+        "/usr/src/linux-headers-6.14.0-37-generic/arch/x86/include/uapi",
+        "/usr/src/linux-headers-6.14.0-37-generic/include/generated",
+        "/usr/src/linux-headers-6.14.0-37-generic/arch/x86/include/generated"
+      ],
+      "defines": [
+        "__KERNEL__",
+        "MODULE",
+        "KBUILD_MODNAME=\"net\""
+      ],
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "/usr/src/linux-headers-6.14.0-37-generic/include",
+          "/usr/src/linux-headers-6.14.0-37-generic/arch/x86/include"
+        ],
+        "limitSymbolsToIncludedHeaders": false
+      }
+    }
+  ],
+  "version": 4
+}

@@ -1,0 +1,14 @@
+{
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "files.associations": {
+    "*.c": "c",
+    "*.h": "c",
+    "Makefile*": "makefile"
+  },
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "C_Cpp.default.includePath": [
+    "/usr/src/linux-headers-6.14.0-37-generic/include",
+    "/usr/src/linux-headers-6.14.0-37-generic/arch/x86/include",
+    "${workspaceFolder}"
+  ]
+}
